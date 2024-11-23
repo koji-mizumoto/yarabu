@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ホテル収益分析ツール</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #4a90e2;
+            --secondary-color: #82ca9d;
+            --background-color: #f5f5f5;
+            --card-background: #ffffff;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: var(--background-color);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            gap: 20px;
+        }
+
+        .card {
+            background: var(--card-background);
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #333;
+        }
+
+        .slider-container {
+            margin-bottom: 1rem;
+        }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+
+        .slider {
+            width: 100%;
+            height: 8px;
+            background: #ddd;
+            border-radius: 4px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: var(--primary-color);
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .stat-item {
+            padding: 1rem;
+            border: 1px solid #eee;
+            border-radius: 4px;
+        }
+
+        .stat-label {
+            font-size: 0.875rem;
+            color: #666;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .revpar-list {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid #eee;
+        }
+
+        .revpar-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .chart-container {
+            height: 400px;
+            position: relative;
+        }
+
+        .annual-metrics {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+
+        @media (min-width: 768px) {
+            .annual-metrics {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+
+        .metric-card {
+            background: #fff;
+            padding: 1rem;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .metric-title {
+            font-size: 0.875rem;
+            color: #666;
+            margin-bottom: 0.5rem;
+        }
+
+        .metric-value {
+            font-size: 1.25rem;
+            font-weight: bold;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h2 class="card-title">稼働率設定</h2>
+            <div id="occupancy-controls"></div>
+        </div>
+
+        <div class="card">
+            <h2 class="card-title">年間指標</h2>
+            <div class="annual-metrics">
+                <div class="metric-card">
+                    <div class="metric-title">年間グロス収入（売上）</div>
+                    <div id="gross-revenue" class="metric-value">¥0</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-title">年間Net収入（利益）</div>
+                    <div id="net-revenue" class="metric-value">¥0</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-title">Net利回り</div>
+                    <div id="net-return" class="metric-value">0%</div>
+                </div>
+            </div>
+            <div class="revpar-list" id="revpar-list"></div>
+        </div>
+
+        <div class="card">
+            <h2 class="card-title">月次収支推移</h2>
+            <div class="chart-container">
+                <canvas id="revenue-chart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const roomTypes = {
+            family: {
+                name: 'ファミリールーム',
+                lowSeasonRate: 60000,
+                highSeasonRate: 120000,
+                rooms: 22
+            },
+            private: {
+                name: 'プライベートルーム',
+                lowSeasonRate: 150000,
+                highSeasonRate: 350000,
+                rooms: 3
+            },
+            suite: {
+                name: 'スイートルーム',
+                lowSeasonRate: 400000,
+                highSeasonRate: 880000,
+                rooms: 1
+            }
+        };
+
+        let occupancyRates = {
+            family: 70,
+            private: 70,
+            suite: 70
+        };
+
+        let revenueChart;
+
+        function initializeOccupancyControls() {
+            const container = document.getElementById('occupancy-controls');
+            Object.entries(roomTypes).forEach(([type, details]) => {
+                const div = document.createElement('div');
+                div.className = 'slider-container';
+                div.innerHTML = `
+                    <div class="slider-label">
+                        <span>${details.name}</span>
+                        <span id="${type}-value">${occupancyRates[type]}%</span>
+                    </div>
+                    <input type="range" min="0" max="100" value="${occupancyRates[type]}"
+                           class="slider" id="${type}-slider">
+                `;
+                container.appendChild(div);
+
+                const slider = div.querySelector(`#${type}-slider`);
+                slider.addEventListener('input', (e) => {
+                    occupancyRates[type] = parseInt(e.target.value);
+                    document.getElementById(`${type}-value`).textContent = `${occupancyRates[type]}%`;
+                    updateCalculations();
+                });
+            });
+        }
+
+        function calculateMonthlyData() {
+            const monthlyRestaurantRevenue = 300000 * 30;
+            const monthlyExpenses = 27314510;
+
+            return Array.from({ length: 12 }, (_, month) => {
+                const isHighSeason = month >= 3 && month <= 11;
+                let totalRoomRevenue = 0;
+                const roomRevenues = {};
+
+                Object.entries(roomTypes).forEach(([type, details]) => {
+                    const rate = isHighSeason ? details.highSeasonRate : details.lowSeasonRate;
+                    const revenue = rate * details.rooms * (occupancyRates[type] / 100) * 30;
+                    totalRoomRevenue += revenue;
+                    roomRevenues[type] = revenue;
+                });
+
+                const grossRevenue = totalRoomRevenue + monthlyRestaurantRevenue;
+                const netIncome = grossRevenue - monthlyExpenses;
+
+                const revpars = {};
+                Object.entries(roomTypes).forEach(([type, details]) => {
+                    revpars[type] = (roomRevenues[type] / (details.rooms * 30));
+                });
+
+                return {
+                    month: `${month + 1}月`,
+                    grossRevenue,
+                    netIncome,
+                    revpars
+                };
+            });
+        }
+
+        function updateChart(monthlyData) {
+            if (revenueChart) {
+                revenueChart.destroy();
+            }
+
+            const ctx = document.getElementById('revenue-chart').getContext('2d');
+            revenueChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: monthlyData.map(d => d.month),
+                    datasets: [{
+                        label: 'グロス収入',
+                        data: monthlyData.map(d => d.grossRevenue),
+                        borderColor: '#8884d8',
+                        tension: 0.1
+                    }, {
+                        label: 'Net収入',
+                        data: monthlyData.map(d => d.netIncome),
+                        borderColor: '#82ca9d',
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            ticks: {
+                                callback: (value) => `¥${(value / 1000000).toFixed(0)}M`
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: (context) => {
+                                    return `${context.dataset.label}: ¥${context.raw.toLocaleString()}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateStats(monthlyData) {
+            const totalGrossRevenue = monthlyData.reduce((sum, month) => sum + month.grossRevenue, 0);
+            const totalNetIncome = monthlyData.reduce((sum, month) => sum + month.netIncome, 0);
+            const netReturnRate = (totalNetIncome / 4000000000 * 100).toFixed(2);
+
+            document.getElementById('gross-revenue').textContent = 
+                `¥${totalGrossRevenue.toLocaleString()}`;
+            document.getElementById('net-revenue').textContent = 
+                `¥${totalNetIncome.toLocaleString()}`;
+            document.getElementById('net-return').textContent = `${netReturnRate}%`;
+
+            // RevPAR更新
+            const revparList = document.getElementById('revpar-list');
+            revparList.innerHTML = '<h3 class="card-title">ルームタイプ別 RevPAR (年間平均)</h3>';
+            Object.entries(roomTypes).forEach(([type, details]) => {
+                const averageRevpar = monthlyData.reduce((sum, month) => 
+                    sum + month.revpars[type], 0) / monthlyData.length;
+                const div = document.createElement('div');
+                div.className = 'revpar-item';
+                div.innerHTML = `
+                    <span>${details.name}</span>
+                    <span>¥${Math.round(averageRevpar).toLocaleString()}</span>
+                `;
+                revparList.appendChild(div);
+            });
+        }
+
+        function updateCalculations() {
+            const monthlyData = calculateMonthlyData();
+            updateChart(monthlyData);
+            updateStats(monthlyData);
+        }
+
+        // 初期化
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeOccupancyControls();
+            updateCalculations();
+        });
+    </script>
+</body>
+</html>
