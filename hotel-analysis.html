@@ -165,6 +165,22 @@
         </div>
 
         <div class="card">
+            <h2 class="card-title">料金設定</h2>
+            <div class="section-title">月間経費</div>
+            <div class="slider-container">
+                <div class="slider-label">
+                    <span>月間経費</span>
+                    <span id="monthly-expenses-value">¥27,314,510</span>
+                </div>
+                <input type="range" min="20000000" max="35000000" value="27314510"
+                       class="slider" id="monthly-expenses-slider">
+            </div>
+
+            <div class="section-title">ルームタイプ別料金</div>
+            <div id="rate-controls"></div>
+        </div>
+
+        <div class="card">
             <h2 class="card-title">年間指標</h2>
             <div class="annual-metrics">
                 <div class="metric-card">
@@ -196,7 +212,7 @@
     </div>
 
     <script>
-        const roomTypes = {
+        let roomTypes = {
             family: {
                 name: 'ファミリールーム',
                 lowSeasonRate: 60000,
@@ -226,8 +242,10 @@
             family: 70,
             private: 70,
             suite: 70,
-            restaurant: 60
+            restaurant: 70
         };
+
+        let monthlyExpenses = 27314510;
 
         let revenueChart;
 
@@ -277,9 +295,65 @@
             });
         }
 
-        function calculateMonthlyData() {
-            const monthlyExpenses = 27314510;
+        function initializeRateControls() {
+            const container = document.getElementById('rate-controls');
+            
+            // 月間経費のスライダーイベントリスナー
+            const expensesSlider = document.getElementById('monthly-expenses-slider');
+            expensesSlider.addEventListener('input', (e) => {
+                monthlyExpenses = parseInt(e.target.value);
+                document.getElementById('monthly-expenses-value').textContent = 
+                    `¥${monthlyExpenses.toLocaleString()}`;
+                updateCalculations();
+            });
 
+            // 各ルームタイプの料金スライダー
+            Object.entries(roomTypes).forEach(([type, details]) => {
+                const div = document.createElement('div');
+                div.innerHTML = `
+                    <div class="section-title">${details.name}</div>
+                    <div class="slider-container">
+                        <div class="slider-label">
+                            <span>通常期料金</span>
+                            <span id="${type}-low-value">¥${details.lowSeasonRate.toLocaleString()}</span>
+                        </div>
+                        <input type="range" min="${details.lowSeasonRate/2}" max="${details.lowSeasonRate*2}" 
+                               value="${details.lowSeasonRate}" class="slider" 
+                               id="${type}-low-slider">
+                    </div>
+                    <div class="slider-container">
+                        <div class="slider-label">
+                            <span>繁忙期料金</span>
+                            <span id="${type}-high-value">¥${details.highSeasonRate.toLocaleString()}</span>
+                        </div>
+                        <input type="range" min="${details.highSeasonRate/2}" max="${details.highSeasonRate*2}" 
+                               value="${details.highSeasonRate}" class="slider" 
+                               id="${type}-high-slider">
+                    </div>
+                `;
+                container.appendChild(div);
+
+                // スライダーのイベントリスナー
+                const lowSlider = div.querySelector(`#${type}-low-slider`);
+                const highSlider = div.querySelector(`#${type}-high-slider`);
+
+                lowSlider.addEventListener('input', (e) => {
+                    roomTypes[type].lowSeasonRate = parseInt(e.target.value);
+                    document.getElementById(`${type}-low-value`).textContent = 
+                        `¥${roomTypes[type].lowSeasonRate.toLocaleString()}`;
+                    updateCalculations();
+                });
+
+                highSlider.addEventListener('input', (e) => {
+                    roomTypes[type].highSeasonRate = parseInt(e.target.value);
+                    document.getElementById(`${type}-high-value`).textContent = 
+                        `¥${roomTypes[type].highSeasonRate.toLocaleString()}`;
+                    updateCalculations();
+                });
+            });
+        }
+
+        function calculateMonthlyData() {
             return Array.from({ length: 12 }, (_, month) => {
                 const isHighSeason = month >= 3 && month <= 11;
                 let totalRoomRevenue = 0;
@@ -404,6 +478,7 @@
         // 初期化
         document.addEventListener('DOMContentLoaded', () => {
             initializeOccupancyControls();
+            initializeRateControls();
             updateCalculations();
         });
     </script>
