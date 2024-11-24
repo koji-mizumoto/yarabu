@@ -41,6 +41,15 @@
             color: #333;
         }
 
+        .section-title {
+            font-size: 1rem;
+            font-weight: 600;
+            margin: 1.5rem 0 1rem;
+            color: #666;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 0.5rem;
+        }
+
         .slider-container {
             margin-bottom: 1rem;
         }
@@ -148,7 +157,11 @@
     <div class="container">
         <div class="card">
             <h2 class="card-title">稼働率設定</h2>
+            <div class="section-title">客室稼働率</div>
             <div id="occupancy-controls"></div>
+            
+            <div class="section-title">レストラン稼働率</div>
+            <div id="restaurant-controls"></div>
         </div>
 
         <div class="card">
@@ -165,6 +178,10 @@
                 <div class="metric-card">
                     <div class="metric-title">Net利回り</div>
                     <div id="net-return" class="metric-value">0%</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-title">レストラン年間収入</div>
+                    <div id="restaurant-revenue" class="metric-value">¥0</div>
                 </div>
             </div>
             <div class="revpar-list" id="revpar-list"></div>
@@ -200,15 +217,22 @@
             }
         };
 
+        const restaurantConfig = {
+            baseRevenue: 300000, // 1日あたりの基準収入
+            capacity: 100 // 収容人数
+        };
+
         let occupancyRates = {
             family: 70,
             private: 70,
-            suite: 70
+            suite: 70,
+            restaurant: 60
         };
 
         let revenueChart;
 
         function initializeOccupancyControls() {
+            // 客室稼働率コントロール
             const container = document.getElementById('occupancy-controls');
             Object.entries(roomTypes).forEach(([type, details]) => {
                 const div = document.createElement('div');
@@ -230,10 +254,30 @@
                     updateCalculations();
                 });
             });
+
+            // レストラン稼働率コントロール
+            const restaurantContainer = document.getElementById('restaurant-controls');
+            const div = document.createElement('div');
+            div.className = 'slider-container';
+            div.innerHTML = `
+                <div class="slider-label">
+                    <span>レストラン稼働率</span>
+                    <span id="restaurant-value">${occupancyRates.restaurant}%</span>
+                </div>
+                <input type="range" min="0" max="100" value="${occupancyRates.restaurant}"
+                       class="slider" id="restaurant-slider">
+            `;
+            restaurantContainer.appendChild(div);
+
+            const slider = div.querySelector('#restaurant-slider');
+            slider.addEventListener('input', (e) => {
+                occupancyRates.restaurant = parseInt(e.target.value);
+                document.getElementById('restaurant-value').textContent = `${occupancyRates.restaurant}%`;
+                updateCalculations();
+            });
         }
 
         function calculateMonthlyData() {
-            const monthlyRestaurantRevenue = 300000 * 30;
             const monthlyExpenses = 27314510;
 
             return Array.from({ length: 12 }, (_, month) => {
@@ -241,12 +285,17 @@
                 let totalRoomRevenue = 0;
                 const roomRevenues = {};
 
+                // 客室収入の計算
                 Object.entries(roomTypes).forEach(([type, details]) => {
                     const rate = isHighSeason ? details.highSeasonRate : details.lowSeasonRate;
                     const revenue = rate * details.rooms * (occupancyRates[type] / 100) * 30;
                     totalRoomRevenue += revenue;
                     roomRevenues[type] = revenue;
                 });
+
+                // レストラン収入の計算（稼働率に応じて変動）
+                const monthlyRestaurantRevenue = restaurantConfig.baseRevenue * 
+                    (occupancyRates.restaurant / 100) * 30;
 
                 const grossRevenue = totalRoomRevenue + monthlyRestaurantRevenue;
                 const netIncome = grossRevenue - monthlyExpenses;
@@ -260,6 +309,7 @@
                     month: `${month + 1}月`,
                     grossRevenue,
                     netIncome,
+                    restaurantRevenue: monthlyRestaurantRevenue,
                     revpars
                 };
             });
@@ -285,6 +335,11 @@
                         data: monthlyData.map(d => d.netIncome),
                         borderColor: '#82ca9d',
                         tension: 0.1
+                    }, {
+                        label: 'レストラン収入',
+                        data: monthlyData.map(d => d.restaurantRevenue),
+                        borderColor: '#ffc658',
+                        tension: 0.1
                     }]
                 },
                 options: {
@@ -293,7 +348,7 @@
                     scales: {
                         y: {
                             ticks: {
-                                callback: (value) => `¥${(value / 1000000).toFixed(0)}M`
+                                callback: (value) => `¥${(value / 1000000).toFixed(1)}M`
                             }
                         }
                     },
@@ -313,6 +368,7 @@
         function updateStats(monthlyData) {
             const totalGrossRevenue = monthlyData.reduce((sum, month) => sum + month.grossRevenue, 0);
             const totalNetIncome = monthlyData.reduce((sum, month) => sum + month.netIncome, 0);
+            const totalRestaurantRevenue = monthlyData.reduce((sum, month) => sum + month.restaurantRevenue, 0);
             const netReturnRate = (totalNetIncome / 4000000000 * 100).toFixed(2);
 
             document.getElementById('gross-revenue').textContent = 
@@ -320,6 +376,8 @@
             document.getElementById('net-revenue').textContent = 
                 `¥${totalNetIncome.toLocaleString()}`;
             document.getElementById('net-return').textContent = `${netReturnRate}%`;
+            document.getElementById('restaurant-revenue').textContent = 
+                `¥${totalRestaurantRevenue.toLocaleString()}`;
 
             // RevPAR更新
             const revparList = document.getElementById('revpar-list');
