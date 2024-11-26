@@ -109,11 +109,41 @@
             border-top: 1px solid #eee;
         }
 
-        .revpar-item {
+        .revpar-content {
             display: flex;
-            justify-content: space-between;
-            padding: 0.5rem 0;
-            border-bottom: 1px solid #eee;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 1rem;
+            margin-top: 1rem;
+            text-align: center;
+        }
+
+        .revpar-item {
+            color: #666;
+        }
+
+        .revpar-separator {
+            color: #ccc;
+        }
+
+        @media (max-width: 768px) {
+            .revpar-content {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+            
+            .revpar-separator {
+                display: none;
+            }
+            
+            .revpar-item {
+                padding: 0.5rem 0;
+                border-bottom: 1px solid #eee;
+            }
+            
+            .revpar-item:last-child {
+                border-bottom: none;
+            }
         }
 
         .chart-container {
@@ -176,6 +206,26 @@
         .intro-list ul {
             margin: 0.5rem;
         }
+
+        .rate-item {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .room-rate-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .rate-values {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .rate-values span {
+            color: #666;
+        }
     </style>
 </head>
 <body>
@@ -183,27 +233,59 @@
 
         <div class="card">
             <h2 class="card-title">稼働率設定</h2>
-            <div class="section-title">客室稼働率</div>
-            <div id="occupancy-controls"></div>
-            
-            <div class="section-title">レストラン稼働率</div>
-            <div id="restaurant-controls"></div>
+            <div class="slider-row">
+                <div class="slider-column">
+                    <div class="slider-label">
+                        <span>全室稼働率</span>
+                        <span id="global-occupancy-value">60%</span>
+                    </div>
+                    <input type="range" min="0" max="100" value="60"
+                           class="slider" id="global-occupancy-slider">
+                </div>
+                <div class="slider-column">
+                    <div class="slider-label">
+                        <span>レストラン稼働率</span>
+                        <span id="restaurant-value">60%</span>
+                    </div>
+                    <input type="range" min="0" max="100" value="60"
+                           class="slider" id="restaurant-slider">
+                </div>
+            </div>
         </div>
 
         <div class="card">
             <h2 class="card-title">料金設定</h2>
-            <div class="section-title">月間経費</div>
-            <div class="slider-container">
-                <div class="slider-label">
-                    <span>月間経費</span>
-                    <span id="monthly-expenses-value">¥51,699,810</span>
+            <div class="slider-row">
+                <div class="slider-column">
+                    <div class="slider-label">
+                        <span>月間経費</span>
+                        <span id="monthly-expenses-value">¥51,699,810</span>
+                    </div>
+                    <input type="range" min="20000000" max="80000000" value="51699810"
+                           step="1000000" class="slider" id="monthly-expenses-slider">
                 </div>
-                <input type="range" min="20000000" max="80000000" value="51699810"
-                       step="1000000" class="slider" id="monthly-expenses-slider">
+                <div class="slider-column">
+                    <div class="slider-label">
+                        <span>通常期料金調整率</span>
+                        <span id="global-low-rate-value">100%</span>
+                    </div>
+                    <input type="range" min="50" max="150" value="100"
+                           class="slider" id="global-low-rate-slider">
+                </div>
+                <div class="slider-column">
+                    <div class="slider-label">
+                        <span>繁忙期料金調整率</span>
+                        <span id="global-high-rate-value">100%</span>
+                    </div>
+                    <input type="range" min="50" max="150" value="100"
+                           class="slider" id="global-high-rate-slider">
+                </div>
             </div>
 
-            <div class="section-title">ルームタイプ別料金</div>
-            <div id="rate-controls"></div>
+            <div class="section-title">現在の料金</div>
+            <div class="rate-display" id="rate-display">
+                <!-- 料金表示は JavaScript で動的に生成 -->
+            </div>
         </div>
 
         <div class="card">
@@ -236,12 +318,12 @@
             </div>
         </div>
 
-        <div class="card">
+        <!-- <div class="card">
             <h2 class="card-title">月次収支推移</h2>
             <div class="chart-container">
                 <canvas id="revenue-chart"></canvas>
             </div>
-        </div>
+        </div> -->
 
         <div class="card">
             <h2 class="card-title">マニュアル</h2>
@@ -266,22 +348,19 @@
                     <li>稼働率設定
                         <ul>
                             <li>全室一括で稼働率を調整できます</li>
-                            <li>部屋タイプごとに個別に調整できます</li>
                             <li>レストランの稼働率を調整できます</li>
                         </ul>
                     </li>
                     <li>料金設定
                         <ul>
+                            <li>月間経費を調整できます（稼働率に関わらず一定）</li>
                             <li>通常期・繁忙期の料金を一括で調整できます（基準額の50%～150%）</li>
-                            <li>部屋タイプごとに個別に料金を調整できます</li>
-                            <li>月間経費を調整できます</li>
                         </ul>
                     </li>
                     <li>分析指標
                         <ul>
-                            <li>部屋タイプごとのRevPARを確認できます</li>
                             <li>年間のグロス収入、Net収入、経費、利回りを確認できます</li>
-                            <li>年間の収支状況をグラフで確認できます</li>
+                            <li>部屋タイプごとのRevPARを確認できます</li>
                         </ul>
                     </li>
                 </ol>
@@ -329,77 +408,19 @@
         let revenueChart;
 
         function initializeOccupancyControls() {
-            const container = document.getElementById('occupancy-controls');
-            
-            // 一括調整用スライダー
-            const globalDiv = document.createElement('div');
-            globalDiv.className = 'slider-container';
-            globalDiv.innerHTML = `
-                <div class="slider-label">
-                    <span>全室稼働率一括調整</span>
-                    <span id="global-occupancy-value">60%</span>
-                </div>
-                <input type="range" min="0" max="100" value="60"
-                       class="slider" id="global-occupancy-slider">
-            `;
-            container.appendChild(globalDiv);
+            const globalSlider = document.getElementById('global-occupancy-slider');
+            const restaurantSlider = document.getElementById('restaurant-slider');
 
-            // 個別の客室稼働率コントロール
-            const roomRow = document.createElement('div');
-            roomRow.className = 'slider-row';
-            
-            Object.entries(roomTypes).forEach(([type, details]) => {
-                const div = document.createElement('div');
-                div.className = 'slider-column';
-                div.innerHTML = `
-                    <div class="slider-label">
-                        <span>${details.name}</span>
-                        <span id="${type}-value">${occupancyRates[type]}%</span>
-                    </div>
-                    <input type="range" min="0" max="100" value="${occupancyRates[type]}"
-                           class="slider" id="${type}-slider">
-                `;
-                roomRow.appendChild(div);
-
-                const slider = div.querySelector(`#${type}-slider`);
-                slider.addEventListener('input', (e) => {
-                    occupancyRates[type] = parseInt(e.target.value);
-                    document.getElementById(`${type}-value`).textContent = `${occupancyRates[type]}%`;
-                    updateCalculations();
-                });
-            });
-            
-            container.appendChild(roomRow);
-
-            // 一括調整スライダーのイベントリスナー
-            const globalSlider = globalDiv.querySelector('#global-occupancy-slider');
             globalSlider.addEventListener('input', (e) => {
                 const value = parseInt(e.target.value);
                 Object.keys(roomTypes).forEach(type => {
                     occupancyRates[type] = value;
-                    document.getElementById(`${type}-slider`).value = value;
-                    document.getElementById(`${type}-value`).textContent = `${value}%`;
                 });
                 document.getElementById('global-occupancy-value').textContent = `${value}%`;
                 updateCalculations();
             });
 
-            // レストラン稼働率コントロール
-            const restaurantContainer = document.getElementById('restaurant-controls');
-            const div = document.createElement('div');
-            div.className = 'slider-container';
-            div.innerHTML = `
-                <div class="slider-label">
-                    <span>レストラン稼働率</span>
-                    <span id="restaurant-value">${occupancyRates.restaurant}%</span>
-                </div>
-                <input type="range" min="0" max="100" value="${occupancyRates.restaurant}"
-                       class="slider" id="restaurant-slider">
-            `;
-            restaurantContainer.appendChild(div);
-
-            const slider = div.querySelector('#restaurant-slider');
-            slider.addEventListener('input', (e) => {
+            restaurantSlider.addEventListener('input', (e) => {
                 occupancyRates.restaurant = parseInt(e.target.value);
                 document.getElementById('restaurant-value').textContent = `${occupancyRates.restaurant}%`;
                 updateCalculations();
@@ -407,33 +428,9 @@
         }
 
         function initializeRateControls() {
-            const container = document.getElementById('rate-controls');
+            const globalLowSlider = document.getElementById('global-low-rate-slider');
+            const globalHighSlider = document.getElementById('global-high-rate-slider');
             
-            // 料金一括調整用スライダー
-            const globalRateDiv = document.createElement('div');
-            globalRateDiv.innerHTML = `
-                <div class="section-title">料金一括調整</div>
-                <div class="slider-row">
-                    <div class="slider-column">
-                        <div class="slider-label">
-                            <span>通常期料金調整率</span>
-                            <span id="global-low-rate-value">100%</span>
-                        </div>
-                        <input type="range" min="50" max="150" value="100"
-                               class="slider" id="global-low-rate-slider">
-                    </div>
-                    <div class="slider-column">
-                        <div class="slider-label">
-                            <span>繁忙期料金調整率</span>
-                            <span id="global-high-rate-value">100%</span>
-                        </div>
-                        <input type="range" min="50" max="150" value="100"
-                               class="slider" id="global-high-rate-slider">
-                    </div>
-                </div>
-            `;
-            container.appendChild(globalRateDiv);
-
             // 初期料金を保存
             const initialRates = {};
             Object.entries(roomTypes).forEach(([type, details]) => {
@@ -443,19 +440,32 @@
                 };
             });
 
-            // 一括調整スライダーのイベントリスナー
-            const globalLowSlider = document.getElementById('global-low-rate-slider');
-            const globalHighSlider = document.getElementById('global-high-rate-slider');
+            function updateRateDisplay() {
+                const rateDisplay = document.getElementById('rate-display');
+                rateDisplay.innerHTML = '';
+                Object.entries(roomTypes).forEach(([type, details]) => {
+                    const div = document.createElement('div');
+                    div.className = 'rate-item';
+                    div.innerHTML = `
+                        <div class="room-rate-row">
+                            <span>${details.name}</span>
+                            <div class="rate-values">
+                                <span>通常期: ¥${details.lowSeasonRate.toLocaleString()}</span>
+                                <span>繁忙期: ¥${details.highSeasonRate.toLocaleString()}</span>
+                            </div>
+                        </div>
+                    `;
+                    rateDisplay.appendChild(div);
+                });
+            }
 
             globalLowSlider.addEventListener('input', (e) => {
                 const ratio = parseInt(e.target.value) / 100;
                 Object.entries(roomTypes).forEach(([type, details]) => {
                     details.lowSeasonRate = Math.round(initialRates[type].lowSeasonRate * ratio);
-                    document.getElementById(`${type}-low-slider`).value = details.lowSeasonRate;
-                    document.getElementById(`${type}-low-value`).textContent = 
-                        `¥${details.lowSeasonRate.toLocaleString()}`;
                 });
                 document.getElementById('global-low-rate-value').textContent = `${e.target.value}%`;
+                updateRateDisplay();
                 updateCalculations();
             });
 
@@ -463,60 +473,14 @@
                 const ratio = parseInt(e.target.value) / 100;
                 Object.entries(roomTypes).forEach(([type, details]) => {
                     details.highSeasonRate = Math.round(initialRates[type].highSeasonRate * ratio);
-                    document.getElementById(`${type}-high-slider`).value = details.highSeasonRate;
-                    document.getElementById(`${type}-high-value`).textContent = 
-                        `¥${details.highSeasonRate.toLocaleString()}`;
                 });
                 document.getElementById('global-high-rate-value').textContent = `${e.target.value}%`;
+                updateRateDisplay();
                 updateCalculations();
             });
 
-            // 各ルームタイプの料金スライダー
-            Object.entries(roomTypes).forEach(([type, details]) => {
-                const div = document.createElement('div');
-                div.innerHTML = `
-                    <div class="section-title">${details.name}</div>
-                    <div class="slider-row">
-                        <div class="slider-column">
-                            <div class="slider-label">
-                                <span>通常期料金</span>
-                                <span id="${type}-low-value">¥${details.lowSeasonRate.toLocaleString()}</span>
-                            </div>
-                            <input type="range" min="${details.lowSeasonRate/2}" max="${details.lowSeasonRate*2}" 
-                                   value="${details.lowSeasonRate}" step="1000" class="slider" 
-                                   id="${type}-low-slider">
-                        </div>
-                        <div class="slider-column">
-                            <div class="slider-label">
-                                <span>繁忙期金</span>
-                                <span id="${type}-high-value">¥${details.highSeasonRate.toLocaleString()}</span>
-                            </div>
-                            <input type="range" min="${details.highSeasonRate/2}" max="${details.highSeasonRate*2}" 
-                                   value="${details.highSeasonRate}" step="1000" class="slider" 
-                                   id="${type}-high-slider">
-                        </div>
-                    </div>
-                `;
-                container.appendChild(div);
-
-                // 個別スライダーのイベントリスナー
-                const lowSlider = div.querySelector(`#${type}-low-slider`);
-                const highSlider = div.querySelector(`#${type}-high-slider`);
-
-                lowSlider.addEventListener('input', (e) => {
-                    details.lowSeasonRate = parseInt(e.target.value);
-                    document.getElementById(`${type}-low-value`).textContent = 
-                        `¥${details.lowSeasonRate.toLocaleString()}`;
-                    updateCalculations();
-                });
-
-                highSlider.addEventListener('input', (e) => {
-                    details.highSeasonRate = parseInt(e.target.value);
-                    document.getElementById(`${type}-high-value`).textContent = 
-                        `¥${details.highSeasonRate.toLocaleString()}`;
-                    updateCalculations();
-                });
-            });
+            // 初期表示
+            updateRateDisplay();
         }
 
         function calculateMonthlyData() {
@@ -625,22 +589,27 @@
             // RevPAR更新
             const revparList = document.getElementById('revpar-list');
             revparList.innerHTML = '<div class="section-title">ルームタイプ別 RevPAR (年間平均)</div>';
-            Object.entries(roomTypes).forEach(([type, details]) => {
+
+            const revparContent = document.createElement('div');
+            revparContent.className = 'revpar-content';
+
+            const revparItems = Object.entries(roomTypes).map(([type, details]) => {
                 const averageRevpar = monthlyData.reduce((sum, month) => 
                     sum + month.revpars[type], 0) / monthlyData.length;
-                const div = document.createElement('div');
-                div.className = 'revpar-item';
-                div.innerHTML = `
-                    <span>${details.name}</span>
-                    <span>¥${Math.round(averageRevpar).toLocaleString()}</span>
+                return `
+                    <span class="revpar-item">
+                        ${details.name} ¥${Math.round(averageRevpar).toLocaleString()}
+                    </span>
                 `;
-                revparList.appendChild(div);
-            });
+            }).join('<span class="revpar-separator">｜</span>');
+
+            revparContent.innerHTML = revparItems;
+            revparList.appendChild(revparContent);
         }
 
         function updateCalculations() {
             const monthlyData = calculateMonthlyData();
-            updateChart(monthlyData);
+            // updateChart(monthlyData);
             updateStats(monthlyData);
         }
 
