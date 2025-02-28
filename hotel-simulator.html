@@ -1,0 +1,1944 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>クラブ＆リゾート MIYAKOJIMA - 収益分析ツール</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #1e3a8a;
+            --secondary-color: #06b6d4;
+            --accent-color: #f472b6;
+            --background-color: #f8fafc;
+            --card-background: #ffffff;
+            --text-color: #111827;
+            --text-secondary: #4b5563;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --error-color: #ef4444;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: var(--background-color);
+            color: var(--text-color);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            gap: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        .card {
+            background: var(--card-background);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            padding: 24px;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            box-shadow: 0 10px 15px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+
+        .card-title {
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin-bottom: 1.2rem;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .card-title i {
+            font-size: 1.2rem;
+        }
+
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin: 1.5rem 0 1rem;
+            color: var(--text-secondary);
+            border-bottom: 1px solid #eee;
+            padding-bottom: 0.5rem;
+        }
+
+        .slider-container {
+            margin-bottom: 1.2rem;
+        }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        .slider-value {
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+
+        .slider {
+            width: 100%;
+            height: 8px;
+            background: #e2e8f0;
+            border-radius: 4px;
+            outline: none;
+            -webkit-appearance: none;
+            cursor: pointer;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            background: var(--primary-color);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .slider::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .stat-item {
+            padding: 1.2rem;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            background: #f8fafc;
+        }
+
+        .stat-item:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            transform: translateY(-3px);
+        }
+
+        .stat-label {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.7rem;
+        }
+
+        .stat-value {
+            font-size: 1.6rem;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        .positive {
+            color: var(--success-color);
+        }
+
+        .negative {
+            color: var(--error-color);
+        }
+
+        .target-value {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin-top: 0.3rem;
+        }
+
+        .revpar-list {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid #eee;
+        }
+
+        .revpar-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.7rem 0;
+            border-bottom: 1px solid #f0f0f0;
+            transition: background-color 0.2s;
+        }
+
+        .revpar-item:hover {
+            background-color: #f8fafc;
+        }
+
+        .chart-container {
+            height: 400px;
+            position: relative;
+        }
+
+        .multi-chart-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            height: 400px;
+        }
+
+        @media (max-width: 768px) {
+            .multi-chart-container {
+                grid-template-columns: 1fr;
+                height: 800px;
+            }
+        }
+
+        .annual-metrics {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        @media (min-width: 768px) {
+            .annual-metrics {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+
+        .metric-card {
+            background: #fff;
+            padding: 1.2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
+        }
+
+        .metric-card:hover {
+            box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+            transform: translateY(-3px);
+        }
+
+        .metric-title {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.7rem;
+        }
+
+        .metric-value {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        .slider-row {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 1.2rem;
+        }
+        
+        .slider-column {
+            flex: 1;
+        }
+
+        .intro-section {
+            padding: 0 1rem;
+        }
+
+        .intro-list {
+            margin: 1rem 0;
+            padding-left: 1.5rem;
+            line-height: 1.7;
+        }
+
+        .intro-list ul {
+            margin: 0.5rem;
+        }
+
+        .tab-container {
+            margin-bottom: 1.5rem;
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .tab {
+            padding: 0.8rem 1.5rem;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+            border-bottom: 2px solid transparent;
+        }
+
+        .tab.active {
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--primary-color);
+        }
+
+        .tab-content {
+            display: none;
+            padding: 1rem 0;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .target-indicator {
+            display: flex;
+            align-items: center;
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .target-bar-container {
+            height: 4px;
+            width: 100%;
+            background: #e2e8f0;
+            border-radius: 2px;
+            margin: 0.5rem 0;
+        }
+
+        .target-bar {
+            height: 100%;
+            background: var(--secondary-color);
+            border-radius: 2px;
+            transition: width 0.5s ease;
+        }
+
+        .target-marker {
+            position: relative;
+            height: 100%;
+        }
+
+        .target-marker::after {
+            content: "";
+            position: absolute;
+            top: -4px;
+            right: 0;
+            width: 3px;
+            height: 12px;
+            background: var(--accent-color);
+        }
+
+        /* ダークモード対応 */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --background-color: #0f172a;
+                --card-background: #1e293b;
+                --text-color: #f1f5f9;
+                --text-secondary: #cbd5e1;
+            }
+
+            .stat-item,
+            .revpar-item:hover {
+                background: #1e293b;
+            }
+
+            .tab {
+                color: #cbd5e1;
+            }
+
+            .slider {
+                background: #334155;
+            }
+
+            .target-bar-container {
+                background: #334155;
+            }
+        }
+
+        /* 罫線付きテーブル */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+        }
+
+        .data-table th, .data-table td {
+            padding: 0.75rem;
+            text-align: right;
+        }
+
+        .data-table th:first-child, .data-table td:first-child {
+            text-align: left;
+        }
+
+        .data-table th {
+            background-color: #f1f5f9;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        .data-table tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+
+        .data-table tr:hover {
+            background-color: #e2e8f0;
+        }
+
+        /* 投資回収期間表示 */
+        .roi-container {
+            display: flex;
+            justify-content: center;
+            margin: 2rem 0;
+        }
+
+        .roi-circle {
+            position: relative;
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            background: #f1f5f9;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border: 3px solid var(--primary-color);
+        }
+
+        .roi-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            text-align: center;
+            transform: rotate(0deg);
+        }
+
+        .roi-label {
+            font-size: 1rem;
+            color: #64748b;
+            text-align: center;
+            transform: rotate(0deg);
+        }
+
+        .icon {
+            display: inline-block;
+            width: 24px;
+            height: 24px;
+            margin-right: 8px;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+
+        .scenario-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 1rem;
+        }
+
+        .scenario-btn {
+            padding: 0.6rem 1.2rem;
+            background: #f1f5f9;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .scenario-btn.active {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        /* Tooltip スタイル */
+        .tooltip {
+            position: relative;
+            display: inline-block;
+            cursor: help;
+        }
+
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 240px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 8px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 0.85rem;
+            font-weight: normal;
+        }
+
+        .tooltip .tooltiptext::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: #333 transparent transparent transparent;
+        }
+
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        /* カスタムチェックボックス */
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            margin: 1rem 0;
+        }
+
+        .toggle-label {
+            margin-left: 10px;
+            font-weight: 500;
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 24px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .toggle-slider {
+            background-color: var(--primary-color);
+        }
+
+        input:checked + .toggle-slider:before {
+            transform: translateX(26px);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>クラブ＆リゾート MIYAKOJIMA - 収益分析ツール</h1>
+            <p>宿泊・レストラン・クラブイベントの複合収益シミュレーション</p>
+        </div>
+
+        <div class="card">
+            <div class="card-title">
+                シナリオ選択
+            </div>
+            <div class="scenario-selector">
+                <button class="scenario-btn" id="conservative-btn">保守的シナリオ</button>
+                <button class="scenario-btn active" id="standard-btn">標準シナリオ</button>
+                <button class="scenario-btn" id="optimistic-btn">楽観的シナリオ</button>
+            </div>
+            <p id="scenario-description">標準シナリオ：計画通りの市場浸透、稼働率65%、予定通りの収益を実現</p>
+        </div>
+
+        <div class="card">
+            <div class="card-title">
+                <span class="icon" style="background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMWUzYThhIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIgY2xhc3M9ImZlYXRoZXIgZmVhdGhlci1zbGlkZXJzIj48bGluZSB4MT0iNCIgeTE9IjIxIiB4Mj0iNCIgeTI9IjE0Ii8+PGxpbmUgeDE9IjQiIHkxPSIxMCIgeDI9IjQiIHkyPSIzIi8+PGxpbmUgeDE9IjEyIiB5MT0iMjEiIHgyPSIxMiIgeTI9IjEyIi8+PGxpbmUgeDE9IjEyIiB5MT0iOCIgeDI9IjEyIiB5Mj0iMyIvPjxsaW5lIHgxPSIyMCIgeTE9IjIxIiB4Mj0iMjAiIHkyPSIxNiIvPjxsaW5lIHgxPSIyMCIgeTE9IjEyIiB4Mj0iMjAiIHkyPSIzIi8+PGxpbmUgeDE9IjEiIHkxPSIxNCIgeDI9IjciIHkyPSIxNCIvPjxsaW5lIHgxPSI5IiB5MT0iOCIgeDI9IjE1IiB5Mj0iOCIvPjxsaW5lIHgxPSIxNyIgeTE9IjE2IiB4Mj0iMjMiIHkyPSIxNiIvPjwvc3ZnPg==');"></span>
+                稼働率設定
+            </div>
+            <div class="tab-container">
+                <div class="tabs">
+                    <div class="tab active" data-tab="occupancy-tab-1">宿泊</div>
+                    <div class="tab" data-tab="occupancy-tab-2">レストラン</div>
+                    <div class="tab" data-tab="occupancy-tab-3">クラブ＆イベント</div>
+                </div>
+                <div class="tab-content active" id="occupancy-tab-1">
+                    <div class="section-title">客室稼働率</div>
+                    <div id="occupancy-controls"></div>
+                </div>
+                <div class="tab-content" id="occupancy-tab-2">
+                    <div class="section-title">レストラン稼働率</div>
+                    <div id="restaurant-controls"></div>
+                </div>
+                <div class="tab-content" id="occupancy-tab-3">
+                    <div class="section-title">クラブ＆イベント稼働率</div>
+                    <div id="club-controls"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">
+                <span class="icon" style="background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMWUzYThhIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIgY2xhc3M9ImZlYXRoZXIgZmVhdGhlci1kb2xsYXItc2lnbiI+PGxpbmUgeDE9IjEyIiB5MT0iMSIgeDI9IjEyIiB5Mj0iMjMiLz48cGF0aCBkPSJNMTcgNUg5LjVhMy41IDMuNSAwIDAgMCAwIDdoNWEzLjUgMy41IDAgMCAxIDAgN0g2Ii8+PC9zdmc+');"></span>
+                料金設定
+            </div>
+
+            <div class="section-title">月間経費</div>
+            <div class="slider-container">
+                <div class="slider-label">
+                    <span>月間経費</span>
+                    <span id="monthly-expenses-value" class="slider-value">¥61,299,810</span>
+                </div>
+                <input type="range" min="40000000" max="80000000" value="61299810"
+                       step="1000000" class="slider" id="monthly-expenses-slider">
+            </div>
+
+            <div class="section-title tooltip">ルームタイプ別料金
+                <span class="tooltiptext">シーズンに応じた料金設定が可能です。繁忙期（4月～12月）と通常期（1月～3月）</span>
+            </div>
+            <div id="rate-controls"></div>
+
+            <div class="section-title tooltip">クラブ＆イベント料金
+                <span class="tooltiptext">通常営業とスペシャルイベントの料金と頻度を設定できます</span>
+            </div>
+            <div id="club-rate-controls"></div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">
+                <span class="icon" style="background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMWUzYThhIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIgY2xhc3M9ImZlYXRoZXIgZmVhdGhlci1jaGFydCI+PHBhdGggZD0iTTMgM3YxOGgxOCIvPjxwYXRoIGQ9Ik0xOC40IDcuOGwzLjItMy4yIi8+PHBhdGggZD0ibTE1LjQgMTAuOC0yLjEgMi4xIi8+PHBhdGggZD0ibTEwLjggMTMuOC0yLjEgMi4xIi8+PHBhdGggZD0ibTMgMyA3LjUgNy41Ii8+PHBhdGggZD0ibTkuNSA1LjcgMi44IDIuOCIvPjxwYXRoIGQ9Im0xNC4zIDEwLjUgMy43IDMuNyIvPjwvc3ZnPg==');"></span>
+                年間指標
+            </div>
+            <div class="annual-metrics">
+                <div class="metric-card">
+                    <div class="metric-title tooltip">年間グロス収入
+                        <span class="tooltiptext">宿泊・レストラン・クラブイベントからの総収入</span>
+                    </div>
+                    <div id="gross-revenue" class="metric-value">¥0</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-title tooltip">年間経費
+                        <span class="tooltiptext">人件費、水光熱費、消耗品など全ての運営コスト</span>
+                    </div>
+                    <div id="annual-expenses" class="metric-value">¥0</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-title tooltip">年間Net収入
+                        <span class="tooltiptext">グロス収入から経費を差し引いた純利益</span>
+                    </div>
+                    <div id="net-revenue" class="metric-value">¥0</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-title tooltip">Net利回り
+                        <span class="tooltiptext">初期投資額（40億円）に対する年間純利益の割合</span>
+                    </div>
+                    <div id="net-return" class="metric-value">0%</div>
+                    <div class="target-indicator">
+                        <!-- 目標: 25.4% -->
+                        <div class="target-bar-container">
+                            <div class="target-bar" id="return-progress-bar" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-label tooltip">宿泊収入
+                        <span class="tooltiptext">全客室タイプの宿泊収入合計</span>
+                    </div>
+                    <div id="accommodation-revenue" class="stat-value">¥0</div>
+                    <div class="target-value">目標: ¥857,520,000</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label tooltip">F&B収入
+                        <span class="tooltiptext">レストラン＆バーの収入合計</span>
+                    </div>
+                    <div id="restaurant-revenue" class="stat-value">¥0</div>
+                    <div class="target-value">目標: ¥217,200,000</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label tooltip">クラブ＆イベント収入
+                        <span class="tooltiptext">クラブ営業とスペシャルイベントからの収入</span>
+                    </div>
+                    <div id="club-revenue" class="stat-value">¥0</div>
+                    <div class="target-value">目標: ¥213,000,000</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label tooltip">平均客室単価 (ADR)
+                        <span class="tooltiptext">販売された客室の平均価格</span>
+                    </div>
+                    <div id="average-daily-rate" class="stat-value">¥0</div>
+                </div>
+            </div>
+
+            <div class="revpar-list" id="revpar-list">
+                <div class="section-title tooltip">ルームタイプ別 RevPAR (年間平均)
+                    <span class="tooltiptext">客室あたりの収益。稼働率と客室単価の掛け合わせ</span>
+                </div>
+                <!-- RevPARアイテムはJavaScriptで動的に追加されます -->
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">
+                <span class="icon" style="background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMWUzYThhIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIgY2xhc3M9ImZlYXRoZXIgZmVhdGhlci10cmVuZGluZy11cCI+PHBvbHlsaW5lIHBvaW50cz0iMjMgNiAyMyAxIDEyIDE2IDggMTIgMSAxOSIvPjxwb2x5bGluZSBwb2ludHM9IjE3IDYgMjMgNiAyMyAxMiIvPjwvc3ZnPg==');"></span>
+                収支分析
+            </div>
+
+            <div class="toggle-container">
+                <label class="toggle-switch">
+                    <input type="checkbox" id="detailed-view-toggle">
+                    <span class="toggle-slider"></span>
+                </label>
+                <span class="toggle-label">詳細ビュー表示</span>
+            </div>
+
+            <div class="chart-container">
+                <canvas id="revenue-chart"></canvas>
+            </div>
+
+            <div id="detailed-view" style="display: none;">
+                <div class="section-title">月別詳細収支</div>
+                <table class="data-table" id="monthly-data-table">
+                    <thead>
+                        <tr>
+                            <th>月</th>
+                            <th>宿泊収入</th>
+                            <th>F&B収入</th>
+                            <th>クラブ収入</th>
+                            <th>総収入</th>
+                            <th>経費</th>
+                            <th>Net収入</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- 月別データがJavaScriptで動的に追加されます -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">
+                <span class="icon" style="background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMWUzYThhIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIgY2xhc3M9ImZlYXRoZXIgZmVhdGhlci1waWUtY2hhcnQiPjxwYXRoIGQ9Ik0yMSAxMmE5IDkgMCAxIDEtOS05IDkgOSAwIDAgMSA5IDlaIi8+PHBhdGggZD0iTTIxIDEyYTkgOS0gMCAwLDAtOS05di4xOEE5IDkgMCAwIDEgMTIuODIgMjEgOSA5IDAgMCAwIDIxIDEyWiIvPjwvc3ZnPg==');"></span>
+                収益構成分析
+            </div>
+            <div class="multi-chart-container">
+                <div class="chart-container">
+                    <canvas id="revenue-composition-chart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <canvas id="seasonal-distribution-chart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">
+                <span class="icon" style="background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMWUzYThhIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIgY2xhc3M9ImZlYXRoZXIgZmVhdGhlci1jYWxlbmRhciI+PHJlY3QgeD0iMyIgeT0iNCIgd2lkdGg9IjE4IiBoZWlnaHQ9IjE4IiByeD0iMiIgcnk9IjIiLz48bGluZSB4MT0iMTYiIHkxPSIyIiB4Mj0iMTYiIHkyPSI2Ii8+PGxpbmUgeDE9IjgiIHkxPSIyIiB4Mj0iOCIgeTI9IjYiLz48bGluZSB4MT0iMyIgeTE9IjEwIiB4Mj0iMjEiIHkyPSIxMCIvPjwvc3ZnPg==');"></span>
+                投資回収期間分析
+            </div>
+            <div class="roi-container">
+                <div class="roi-circle" id="roi-circle">
+                    <div class="roi-text-container">
+                        <div class="roi-value" id="roi-years">9.6年</div>
+                        <div class="roi-label">投資回収期間</div>
+                    </div>
+                </div>
+            </div>
+            <div class="section-title">投資対効果</div>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>項目</th>
+                        <th>数値</th>
+                        <th>備考</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>総投資額</td>
+                        <td>¥4,000,000,000</td>
+                        <td>初期投資総額</td>
+                    </tr>
+                    <tr>
+                        <td>年間純利益</td>
+                        <td id="roi-annual-profit">¥411,500,000</td>
+                        <td>初年度の予測値</td>
+                    </tr>
+                    <tr>
+                        <td>ROI</td>
+                        <td id="roi-percentage">10.3%</td>
+                        <td>年間純利益÷総投資額</td>
+                    </tr>
+                    <tr>
+                        <td>IRR (10年)</td>
+                        <td id="roi-irr">12.5%</td>
+                        <td>10年間の内部収益率</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <div class="card-title">
+                <span class="icon" style="background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMWUzYThhIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIgY2xhc3M9ImZlYXRoZXIgZmVhdGhlci1oZWxwLWNpcmNsZSI+PGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMTAiLz48cGF0aCBkPSJNOS4wOSA5YTMgMyAwIDAgMSA1LjgzIDFjMCAyLTMgMy0zIDMiLz48bGluZSB4MT0iMTIiIHkxPSIxNyIgeDI9IjEyLjAxIiB5Mj0iMTciLz48L3N2Zz4=');"></span>
+                マニュアル
+            </div>
+            <div class="intro-section">
+                <h3 class="section-title">初期設定</h3>
+                <ul class="intro-list">
+                    <li>客室構成：
+                        <ul>
+                            <li>Groove Room：22室（通常期¥60,000、繁忙期¥120,000）</li>
+                            <li>Vibe Suite：3室（通常期¥150,000、繁忙期¥350,000）</li>
+                            <li>Ultimate Party Villa：1室（通常期¥400,000、繁忙期¥880,000）</li>
+                        </ul>
+                    </li>
+                    <li>初期稼働率：全室種65%（事業計画書に基づく）</li>
+                    <li>レストラン収容人数：100名（稼働率65%）</li>
+                    <li>クラブ＆イベント：通常営業とスペシャルイベントの組み合わせ</li>
+                    <li>月間経費：¥61,299,810（年間¥735,597,720）</li>
+                    <li>繁忙期：4月～12月、通常期：1月～3月</li>
+                    <li>投資総額：40億円</li>
+                </ul>
+
+                <h3 class="section-title">使い方</h3>
+                <ol class="intro-list">
+                    <li>シナリオ選択
+                        <ul>
+                            <li>保守的、標準、楽観的の3つのシナリオから選べます</li>
+                            <li>各シナリオで稼働率と収益性が変動します</li>
+                        </ul>
+                    </li>
+                    <li>稼働率設定
+                        <ul>
+                            <li>宿泊、レストラン、クラブのタブで個別に設定できます</li>
+                            <li>全室一括で稼働率を調整できます</li>
+                            <li>部屋タイプごとに個別に調整できます</li>
+                        </ul>
+                    </li>
+                    <li>料金設定
+                        <ul>
+                            <li>通常期・繁忙期の料金を一括で調整できます（基準額の50%～150%）</li>
+                            <li>部屋タイプごとに個別に料金を調整できます</li>
+                            <li>クラブイベントの料金と頻度を調整できます</li>
+                            <li>月間経費を調整できます</li>
+                        </ul>
+                    </li>
+                    <li>分析指標
+                        <ul>
+                            <li>詳細ビューで月別の収支内訳を確認できます</li>
+                            <li>収益構成分析で収入源のバランスを確認できます</li>
+                            <li>投資回収期間と対効果を確認できます</li>
+                        </ul>
+                    </li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ルームタイプの定義
+        let roomTypes = {
+            family: {
+                name: 'Groove Room',
+                lowSeasonRate: 60000,
+                highSeasonRate: 120000,
+                rooms: 22
+            },
+            private: {
+                name: 'Vibe Suite',
+                lowSeasonRate: 150000,
+                highSeasonRate: 350000,
+                rooms: 3
+            },
+            suite: {
+                name: 'Ultimate Party Villa',
+                lowSeasonRate: 400000,
+                highSeasonRate: 880000,
+                rooms: 1
+            }
+        };
+
+        // レストラン設定
+        const restaurantConfig = {
+            baseRevenue: 350000, // 1日あたりの基準収入（満席時）
+            capacity: 100 // 収容人数
+        };
+
+        // クラブ＆イベント設定
+        const clubConfig = {
+            dayEvents: {
+                basePrice: 3000, // 入場料
+                capacity: 150, // 収容人数
+                daysPerMonth: 13, // 月あたりの営業日数
+                vipTables: {
+                    price: 50000, // VIPテーブル料金
+                    count: 5 // テーブル数
+                }
+            },
+            nightEvents: {
+                basePrice: 5000, // 入場料
+                capacity: 150, // 収容人数
+                daysPerMonth: 8, // 月あたりの営業日数
+                vipTables: {
+                    price: 100000, // VIPテーブル料金
+                    count: 5 // テーブル数
+                }
+            },
+            specialEvents: {
+                basePrice: 10000, // 入場料
+                capacity: 200, // 収容人数
+                eventsPerMonth: 1, // 月あたりのイベント数
+                vipTables: {
+                    price: 300000, // VIPテーブル料金
+                    count: 10 // テーブル数
+                }
+            },
+            privateEvents: {
+                price: 1000000, // プライベートイベント料金
+                eventsPerMonth: 4 // 月あたりのイベント数
+            }
+        };
+
+        // 稼働率の初期値
+        let occupancyRates = {
+            family: 65,
+            private: 65,
+            suite: 65,
+            restaurant: 65,
+            clubDay: 60,
+            clubNight: 70,
+            clubSpecial: 80,
+            clubPrivate: 50
+        };
+
+        // 月間経費
+        let monthlyExpenses = 61299810;
+
+        // チャートのインスタンス
+        let revenueChart;
+        let revenueCompositionChart;
+        let seasonalDistributionChart;
+
+        // 投資額
+        const totalInvestment = 4000000000;
+
+        // シナリオ設定
+        const scenarios = {
+            conservative: {
+                name: "保守的シナリオ",
+                description: "市場成長の遅延を想定、稼働率60%、控えめな収益予測",
+                occupancy: {
+                    room: 60,
+                    restaurant: 60,
+                    club: 55
+                },
+                roi: {
+                    years: 10.4,
+                    profit: 319400000,
+                    percentage: 8.0,
+                    irr: 10.3
+                }
+            },
+            standard: {
+                name: "標準シナリオ",
+                description: "計画通りの市場浸透、稼働率65%、予定通りの収益を実現",
+                occupancy: {
+                    room: 65,
+                    restaurant: 65,
+                    club: 65
+                },
+                roi: {
+                    years: 9.6,
+                    profit: 411500000,
+                    percentage: 10.3,
+                    irr: 12.5
+                }
+            },
+            optimistic: {
+                name: "楽観的シナリオ",
+                description: "国際的認知度の早期確立、稼働率70%、高い収益性を実現",
+                occupancy: {
+                    room: 70,
+                    restaurant: 70,
+                    club: 75
+                },
+                roi: {
+                    years: 8.8,
+                    profit: 503600000,
+                    percentage: 12.6,
+                    irr: 14.8
+                }
+            }
+        };
+
+        // 目標値
+        const targets = {
+            revenue: {
+                gross: 1287720000,
+                accommodation: 857520000,
+                restaurant: 217200000,
+                club: 213000000
+            },
+            netReturn: 25.4
+        };
+
+        // 現在のシナリオ
+        let currentScenario = 'standard';
+
+        // タブ切り替え機能の初期化
+        function initializeTabs() {
+            const tabs = document.querySelectorAll('.tab');
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    // 同じ親要素内の全てのタブとコンテンツから active クラスを削除
+                    const parent = tab.closest('.tab-container');
+                    parent.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    parent.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                    
+                    // クリックされたタブに active クラスを追加
+                    tab.classList.add('active');
+                    
+                    // 対応するコンテンツを表示
+                    const tabId = tab.getAttribute('data-tab');
+                    document.getElementById(tabId).classList.add('active');
+                });
+            });
+        }
+
+        // シナリオ選択の初期化
+        function initializeScenarioSelector() {
+            const btns = {
+                conservative: document.getElementById('conservative-btn'),
+                standard: document.getElementById('standard-btn'),
+                optimistic: document.getElementById('optimistic-btn')
+            };
+            
+            const description = document.getElementById('scenario-description');
+            
+            Object.keys(btns).forEach(scenario => {
+                btns[scenario].addEventListener('click', () => {
+                    // 全てのボタンから active クラスを削除
+                    Object.values(btns).forEach(btn => btn.classList.remove('active'));
+                    
+                    // クリックされたボタンに active クラスを追加
+                    btns[scenario].classList.add('active');
+                    
+                    // シナリオを適用
+                    applyScenario(scenario);
+                    
+                    // 説明文を更新
+                    description.textContent = `${scenarios[scenario].name}：${scenarios[scenario].description}`;
+                });
+            });
+        }
+
+        // シナリオ適用
+        function applyScenario(scenario) {
+            currentScenario = scenario;
+            const scn = scenarios[scenario];
+            
+            // 宿泊稼働率の更新
+            Object.keys(roomTypes).forEach(type => {
+                occupancyRates[type] = scn.occupancy.room;
+                document.getElementById(`${type}-slider`).value = scn.occupancy.room;
+                document.getElementById(`${type}-value`).textContent = `${scn.occupancy.room}%`;
+            });
+            document.getElementById('global-occupancy-slider').value = scn.occupancy.room;
+            document.getElementById('global-occupancy-value').textContent = `${scn.occupancy.room}%`;
+            
+            // レストラン稼働率の更新
+            occupancyRates.restaurant = scn.occupancy.restaurant;
+            document.getElementById('restaurant-slider').value = scn.occupancy.restaurant;
+            document.getElementById('restaurant-value').textContent = `${scn.occupancy.restaurant}%`;
+            
+            // クラブ稼働率の更新
+            occupancyRates.clubDay = scn.occupancy.club;
+            document.getElementById('club-day-slider').value = scn.occupancy.club;
+            document.getElementById('club-day-value').textContent = `${scn.occupancy.club}%`;
+            
+            occupancyRates.clubNight = scn.occupancy.club + 5;
+            document.getElementById('club-night-slider').value = scn.occupancy.club + 5;
+            document.getElementById('club-night-value').textContent = `${scn.occupancy.club + 5}%`;
+            
+            occupancyRates.clubSpecial = scn.occupancy.club + 10;
+            document.getElementById('club-special-slider').value = scn.occupancy.club + 10;
+            document.getElementById('club-special-value').textContent = `${scn.occupancy.club + 10}%`;
+            
+            occupancyRates.clubPrivate = scn.occupancy.club - 15;
+            document.getElementById('club-private-slider').value = scn.occupancy.club - 15;
+            document.getElementById('club-private-value').textContent = `${scn.occupancy.club - 15}%`;
+            
+            // 投資回収期間情報の更新
+            document.getElementById('roi-years').textContent = `${scn.roi.years}年`;
+            document.getElementById('roi-annual-profit').textContent = `¥${scn.roi.profit.toLocaleString()}`;
+            document.getElementById('roi-percentage').textContent = `${scn.roi.percentage}%`;
+            document.getElementById('roi-irr').textContent = `${scn.roi.irr}%`;
+            
+            // ROIサークルのアニメーション
+            // const circle = document.getElementById('roi-circle');
+            // const rotationDegrees = 360 * (scn.roi.years / 15); // 15年を最大値として回転
+            // circle.style.setProperty('--rotation', `${rotationDegrees}deg`);
+            
+            // // アニメーション
+            // circle.style.transition = 'transform 0s';
+            // circle.style.transform = 'rotate(0deg)';
+            // setTimeout(() => {
+            //     circle.style.transition = 'transform 1s ease';
+            //     circle.style.transform = `rotate(${rotationDegrees}deg)`;
+            // }, 50);
+            
+            // 計算更新
+            updateCalculations();
+        }
+
+        // 客室稼働率コントロールの初期化
+        function initializeOccupancyControls() {
+            const container = document.getElementById('occupancy-controls');
+            
+            // 一括調整用スライダー
+            const globalDiv = document.createElement('div');
+            globalDiv.className = 'slider-container';
+            globalDiv.innerHTML = `
+                <div class="slider-label">
+                    <span>全室稼働率一括調整</span>
+                    <span id="global-occupancy-value" class="slider-value">65%</span>
+                </div>
+                <input type="range" min="0" max="100" value="65"
+                       class="slider" id="global-occupancy-slider">
+            `;
+            container.appendChild(globalDiv);
+
+            // 個別の客室稼働率コントロール
+            const roomRow = document.createElement('div');
+            roomRow.className = 'slider-row';
+            
+            Object.entries(roomTypes).forEach(([type, details]) => {
+                const div = document.createElement('div');
+                div.className = 'slider-column';
+                div.innerHTML = `
+                    <div class="slider-label">
+                        <span>${details.name}</span>
+                        <span id="${type}-value" class="slider-value">${occupancyRates[type]}%</span>
+                    </div>
+                    <input type="range" min="0" max="100" value="${occupancyRates[type]}"
+                           class="slider" id="${type}-slider">
+                `;
+                roomRow.appendChild(div);
+
+                const slider = div.querySelector(`#${type}-slider`);
+                slider.addEventListener('input', (e) => {
+                    occupancyRates[type] = parseInt(e.target.value);
+                    document.getElementById(`${type}-value`).textContent = `${occupancyRates[type]}%`;
+                    updateCalculations();
+                });
+            });
+            
+            container.appendChild(roomRow);
+
+            // 一括調整スライダーのイベントリスナー
+            const globalSlider = globalDiv.querySelector('#global-occupancy-slider');
+            globalSlider.addEventListener('input', (e) => {
+                const value = parseInt(e.target.value);
+                Object.keys(roomTypes).forEach(type => {
+                    occupancyRates[type] = value;
+                    document.getElementById(`${type}-slider`).value = value;
+                    document.getElementById(`${type}-value`).textContent = `${value}%`;
+                });
+                document.getElementById('global-occupancy-value').textContent = `${value}%`;
+                updateCalculations();
+            });
+
+            // レストラン稼働率コントロール
+            const restaurantContainer = document.getElementById('restaurant-controls');
+            const div = document.createElement('div');
+            div.className = 'slider-container';
+            div.innerHTML = `
+                <div class="slider-label">
+                    <span>レストラン稼働率</span>
+                    <span id="restaurant-value" class="slider-value">${occupancyRates.restaurant}%</span>
+                </div>
+                <input type="range" min="0" max="100" value="${occupancyRates.restaurant}"
+                       class="slider" id="restaurant-slider">
+            `;
+            restaurantContainer.appendChild(div);
+
+            const slider = div.querySelector('#restaurant-slider');
+            slider.addEventListener('input', (e) => {
+                occupancyRates.restaurant = parseInt(e.target.value);
+                document.getElementById('restaurant-value').textContent = `${occupancyRates.restaurant}%`;
+                updateCalculations();
+            });
+
+            // クラブ稼働率コントロール
+            const clubContainer = document.getElementById('club-controls');
+            
+            // デイタイムイベント
+            const dayDiv = document.createElement('div');
+            dayDiv.className = 'slider-container';
+            dayDiv.innerHTML = `
+                <div class="slider-label tooltip">
+                    <span>デイタイムイベント稼働率</span>
+                    <span class="tooltiptext">プールパーティーなど日中のイベントの稼働率</span>
+                    <span id="club-day-value" class="slider-value">65%</span>
+                </div>
+                <input type="range" min="0" max="100" value="65"
+                       class="slider" id="club-day-slider">
+            `;
+            clubContainer.appendChild(dayDiv);
+            
+            // ナイトタイムイベント
+            const nightDiv = document.createElement('div');
+            nightDiv.className = 'slider-container';
+            nightDiv.innerHTML = `
+                <div class="slider-label tooltip">
+                    <span>ナイトタイムイベント稼働率</span>
+                    <span class="tooltiptext">夜間のクラブイベントの稼働率</span>
+                    <span id="club-night-value" class="slider-value">70%</span>
+                </div>
+                <input type="range" min="0" max="100" value="70"
+                       class="slider" id="club-night-slider">
+            `;
+            clubContainer.appendChild(nightDiv);
+            
+            // スペシャルイベント
+            const specialDiv = document.createElement('div');
+            specialDiv.className = 'slider-container';
+            specialDiv.innerHTML = `
+                <div class="slider-label tooltip">
+                    <span>スペシャルイベント稼働率</span>
+                    <span class="tooltiptext">国際的DJによる特別イベントの稼働率</span>
+                    <span id="club-special-value" class="slider-value">80%</span>
+                </div>
+                <input type="range" min="0" max="100" value="80"
+                       class="slider" id="club-special-slider">
+            `;
+            clubContainer.appendChild(specialDiv);
+            
+            // プライベートイベント
+            const privateDiv = document.createElement('div');
+            privateDiv.className = 'slider-container';
+            privateDiv.innerHTML = `
+                <div class="slider-label tooltip">
+                    <span>プライベートイベント稼働率</span>
+                    <span class="tooltiptext">貸切イベントの予約率</span>
+                    <span id="club-private-value" class="slider-value">50%</span>
+                </div>
+                <input type="range" min="0" max="100" value="50"
+                       class="slider" id="club-private-slider">
+            `;
+            clubContainer.appendChild(privateDiv);
+            
+            // イベントリスナー設定
+            occupancyRates.clubDay = 65;
+            occupancyRates.clubNight = 70;
+            occupancyRates.clubSpecial = 80;
+            occupancyRates.clubPrivate = 50;
+            
+            const clubDaySlider = document.getElementById('club-day-slider');
+            clubDaySlider.addEventListener('input', (e) => {
+                occupancyRates.clubDay = parseInt(e.target.value);
+                document.getElementById('club-day-value').textContent = `${occupancyRates.clubDay}%`;
+                updateCalculations();
+            });
+            
+            const clubNightSlider = document.getElementById('club-night-slider');
+            clubNightSlider.addEventListener('input', (e) => {
+                occupancyRates.clubNight = parseInt(e.target.value);
+                document.getElementById('club-night-value').textContent = `${occupancyRates.clubNight}%`;
+                updateCalculations();
+            });
+            
+            const clubSpecialSlider = document.getElementById('club-special-slider');
+            clubSpecialSlider.addEventListener('input', (e) => {
+                occupancyRates.clubSpecial = parseInt(e.target.value);
+                document.getElementById('club-special-value').textContent = `${occupancyRates.clubSpecial}%`;
+                updateCalculations();
+            });
+            
+            const clubPrivateSlider = document.getElementById('club-private-slider');
+            clubPrivateSlider.addEventListener('input', (e) => {
+                occupancyRates.clubPrivate = parseInt(e.target.value);
+                document.getElementById('club-private-value').textContent = `${occupancyRates.clubPrivate}%`;
+                updateCalculations();
+            });
+        }
+
+        // 料金設定コントロールの初期化
+        function initializeRateControls() {
+            const container = document.getElementById('rate-controls');
+            
+            // 料金一括調整用スライダー
+            const globalRateDiv = document.createElement('div');
+            globalRateDiv.innerHTML = `
+                <div class="slider-row">
+                    <div class="slider-column">
+                        <div class="slider-label">
+                            <span>通常期料金調整率</span>
+                            <span id="global-low-rate-value" class="slider-value">100%</span>
+                        </div>
+                        <input type="range" min="50" max="150" value="100"
+                               class="slider" id="global-low-rate-slider">
+                    </div>
+                    <div class="slider-column">
+                        <div class="slider-label">
+                            <span>繁忙期料金調整率</span>
+                            <span id="global-high-rate-value" class="slider-value">100%</span>
+                        </div>
+                        <input type="range" min="50" max="150" value="100"
+                               class="slider" id="global-high-rate-slider">
+                    </div>
+                </div>
+            `;
+            container.appendChild(globalRateDiv);
+
+            // 初期料金を保存
+            const initialRates = {};
+            Object.entries(roomTypes).forEach(([type, details]) => {
+                initialRates[type] = {
+                    lowSeasonRate: details.lowSeasonRate,
+                    highSeasonRate: details.highSeasonRate
+                };
+            });
+
+            // 一括調整スライダーのイベントリスナー
+            const globalLowSlider = document.getElementById('global-low-rate-slider');
+            const globalHighSlider = document.getElementById('global-high-rate-slider');
+
+            globalLowSlider.addEventListener('input', (e) => {
+                const ratio = parseInt(e.target.value) / 100;
+                Object.entries(roomTypes).forEach(([type, details]) => {
+                    details.lowSeasonRate = Math.round(initialRates[type].lowSeasonRate * ratio);
+                    document.getElementById(`${type}-low-slider`).value = details.lowSeasonRate;
+                    document.getElementById(`${type}-low-value`).textContent = 
+                        `¥${details.lowSeasonRate.toLocaleString()}`;
+                });
+                document.getElementById('global-low-rate-value').textContent = `${e.target.value}%`;
+                updateCalculations();
+            });
+
+            globalHighSlider.addEventListener('input', (e) => {
+                const ratio = parseInt(e.target.value) / 100;
+                Object.entries(roomTypes).forEach(([type, details]) => {
+                    details.highSeasonRate = Math.round(initialRates[type].highSeasonRate * ratio);
+                    document.getElementById(`${type}-high-slider`).value = details.highSeasonRate;
+                    document.getElementById(`${type}-high-value`).textContent = 
+                        `¥${details.highSeasonRate.toLocaleString()}`;
+                });
+                document.getElementById('global-high-rate-value').textContent = `${e.target.value}%`;
+                updateCalculations();
+            });
+
+            // 各ルームタイプの料金スライダー
+            Object.entries(roomTypes).forEach(([type, details]) => {
+                const div = document.createElement('div');
+                div.innerHTML = `
+                    <div class="section-title">${details.name}</div>
+                    <div class="slider-row">
+                        <div class="slider-column">
+                            <div class="slider-label">
+                                <span>通常期料金</span>
+                                <span id="${type}-low-value" class="slider-value">¥${details.lowSeasonRate.toLocaleString()}</span>
+                            </div>
+                            <input type="range" min="${details.lowSeasonRate/2}" max="${details.lowSeasonRate*2}" 
+                                   value="${details.lowSeasonRate}" step="1000" class="slider" 
+                                   id="${type}-low-slider">
+                        </div>
+                        <div class="slider-column">
+                            <div class="slider-label">
+                                <span>繁忙期金</span>
+                                <span id="${type}-high-value" class="slider-value">¥${details.highSeasonRate.toLocaleString()}</span>
+                            </div>
+                            <input type="range" min="${details.highSeasonRate/2}" max="${details.highSeasonRate*2}" 
+                                   value="${details.highSeasonRate}" step="1000" class="slider" 
+                                   id="${type}-high-slider">
+                        </div>
+                    </div>
+                `;
+                container.appendChild(div);
+
+                // 個別スライダーのイベントリスナー
+                const lowSlider = div.querySelector(`#${type}-low-slider`);
+                const highSlider = div.querySelector(`#${type}-high-slider`);
+
+                lowSlider.addEventListener('input', (e) => {
+                    details.lowSeasonRate = parseInt(e.target.value);
+                    document.getElementById(`${type}-low-value`).textContent = 
+                        `¥${details.lowSeasonRate.toLocaleString()}`;
+                    updateCalculations();
+                });
+
+                highSlider.addEventListener('input', (e) => {
+                    details.highSeasonRate = parseInt(e.target.value);
+                    document.getElementById(`${type}-high-value`).textContent = 
+                        `¥${details.highSeasonRate.toLocaleString()}`;
+                    updateCalculations();
+                });
+            });
+            
+            // クラブイベント料金設定
+            const clubRateContainer = document.getElementById('club-rate-controls');
+            
+            // デイタイムイベント
+            const dayRateDiv = document.createElement('div');
+            dayRateDiv.className = 'slider-container';
+            dayRateDiv.innerHTML = `
+                <div class="slider-label">
+                    <span>デイタイム入場料</span>
+                    <span id="club-day-rate-value" class="slider-value">¥${clubConfig.dayEvents.basePrice.toLocaleString()}</span>
+                </div>
+                <input type="range" min="1000" max="10000" value="${clubConfig.dayEvents.basePrice}"
+                       step="500" class="slider" id="club-day-rate-slider">
+            `;
+            clubRateContainer.appendChild(dayRateDiv);
+            
+            // ナイトタイムイベント
+            const nightRateDiv = document.createElement('div');
+            nightRateDiv.className = 'slider-container';
+            nightRateDiv.innerHTML = `
+                <div class="slider-label">
+                    <span>ナイトタイム入場料</span>
+                    <span id="club-night-rate-value" class="slider-value">¥${clubConfig.nightEvents.basePrice.toLocaleString()}</span>
+                </div>
+                <input type="range" min="2000" max="15000" value="${clubConfig.nightEvents.basePrice}"
+                       step="500" class="slider" id="club-night-rate-slider">
+            `;
+            clubRateContainer.appendChild(nightRateDiv);
+            
+            // スペシャルイベント
+            const specialRateDiv = document.createElement('div');
+            specialRateDiv.className = 'slider-container';
+            specialRateDiv.innerHTML = `
+                <div class="slider-label">
+                    <span>スペシャルイベント入場料</span>
+                    <span id="club-special-rate-value" class="slider-value">¥${clubConfig.specialEvents.basePrice.toLocaleString()}</span>
+                </div>
+                <input type="range" min="5000" max="30000" value="${clubConfig.specialEvents.basePrice}"
+                       step="1000" class="slider" id="club-special-rate-slider">
+            `;
+            clubRateContainer.appendChild(specialRateDiv);
+            
+            // プライベートイベント
+            const privateRateDiv = document.createElement('div');
+            privateRateDiv.className = 'slider-container';
+            privateRateDiv.innerHTML = `
+                <div class="slider-label">
+                    <span>プライベートイベント料金</span>
+                    <span id="club-private-rate-value" class="slider-value">¥${clubConfig.privateEvents.price.toLocaleString()}</span>
+                </div>
+                <input type="range" min="500000" max="3000000" value="${clubConfig.privateEvents.price}"
+                       step="100000" class="slider" id="club-private-rate-slider">
+            `;
+            clubRateContainer.appendChild(privateRateDiv);
+            
+            // イベントリスナー設定
+            const clubDayRateSlider = document.getElementById('club-day-rate-slider');
+            clubDayRateSlider.addEventListener('input', (e) => {
+                clubConfig.dayEvents.basePrice = parseInt(e.target.value);
+                document.getElementById('club-day-rate-value').textContent = 
+                    `¥${clubConfig.dayEvents.basePrice.toLocaleString()}`;
+                updateCalculations();
+            });
+            
+            const clubNightRateSlider = document.getElementById('club-night-rate-slider');
+            clubNightRateSlider.addEventListener('input', (e) => {
+                clubConfig.nightEvents.basePrice = parseInt(e.target.value);
+                document.getElementById('club-night-rate-value').textContent = 
+                    `¥${clubConfig.nightEvents.basePrice.toLocaleString()}`;
+                updateCalculations();
+            });
+            
+            const clubSpecialRateSlider = document.getElementById('club-special-rate-slider');
+            clubSpecialRateSlider.addEventListener('input', (e) => {
+                clubConfig.specialEvents.basePrice = parseInt(e.target.value);
+                document.getElementById('club-special-rate-value').textContent = 
+                    `¥${clubConfig.specialEvents.basePrice.toLocaleString()}`;
+                updateCalculations();
+            });
+            
+            const clubPrivateRateSlider = document.getElementById('club-private-rate-slider');
+            clubPrivateRateSlider.addEventListener('input', (e) => {
+                clubConfig.privateEvents.price = parseInt(e.target.value);
+                document.getElementById('club-private-rate-value').textContent = 
+                    `¥${clubConfig.privateEvents.price.toLocaleString()}`;
+                updateCalculations();
+            });
+        }
+
+        // 詳細ビューの切り替え機能
+        function initializeDetailedViewToggle() {
+            const toggle = document.getElementById('detailed-view-toggle');
+            const detailedView = document.getElementById('detailed-view');
+            
+            toggle.addEventListener('change', () => {
+                if (toggle.checked) {
+                    detailedView.style.display = 'block';
+                } else {
+                    detailedView.style.display = 'none';
+                }
+            });
+        }
+
+        // 月次データの計算
+        function calculateMonthlyData() {
+            return Array.from({ length: 12 }, (_, month) => {
+                const isHighSeason = month >= 3 && month <= 11; // 4月～12月は繁忙期
+                let roomRevenues = {};
+                let totalRoomRevenue = 0;
+
+                // 客室収入の計算
+                Object.entries(roomTypes).forEach(([type, details]) => {
+                    const rate = isHighSeason ? details.highSeasonRate : details.lowSeasonRate;
+                    const revenue = rate * details.rooms * (occupancyRates[type] / 100) * 30;
+                    totalRoomRevenue += revenue;
+                    roomRevenues[type] = revenue;
+                });
+
+                // レストラン収入の計算
+                const monthlyRestaurantRevenue = restaurantConfig.baseRevenue * 
+                    (occupancyRates.restaurant / 100) * 30;
+                
+                // クラブ収入の計算
+                let clubRevenue = 0;
+                
+                // デイタイムイベント
+                const dayEventRevenue = clubConfig.dayEvents.basePrice * 
+                    clubConfig.dayEvents.capacity * (occupancyRates.clubDay / 100) * 
+                    clubConfig.dayEvents.daysPerMonth;
+                const dayVipRevenue = clubConfig.dayEvents.vipTables.price * 
+                    clubConfig.dayEvents.vipTables.count * (occupancyRates.clubDay / 100) * 
+                    clubConfig.dayEvents.daysPerMonth;
+                
+                // ナイトタイムイベント
+                const nightEventRevenue = clubConfig.nightEvents.basePrice * 
+                    clubConfig.nightEvents.capacity * (occupancyRates.clubNight / 100) * 
+                    clubConfig.nightEvents.daysPerMonth;
+                const nightVipRevenue = clubConfig.nightEvents.vipTables.price * 
+                    clubConfig.nightEvents.vipTables.count * (occupancyRates.clubNight / 100) * 
+                    clubConfig.nightEvents.daysPerMonth;
+                
+                // スペシャルイベント
+                const specialEventRevenue = clubConfig.specialEvents.basePrice * 
+                    clubConfig.specialEvents.capacity * (occupancyRates.clubSpecial / 100) * 
+                    clubConfig.specialEvents.eventsPerMonth;
+                const specialVipRevenue = clubConfig.specialEvents.vipTables.price * 
+                    clubConfig.specialEvents.vipTables.count * (occupancyRates.clubSpecial / 100) * 
+                    clubConfig.specialEvents.eventsPerMonth;
+                
+                // プライベートイベント
+                const privateEventRevenue = clubConfig.privateEvents.price * 
+                    (occupancyRates.clubPrivate / 100) * clubConfig.privateEvents.eventsPerMonth;
+                
+                // 総クラブ収入
+                clubRevenue = dayEventRevenue + dayVipRevenue + 
+                              nightEventRevenue + nightVipRevenue + 
+                              specialEventRevenue + specialVipRevenue + 
+                              privateEventRevenue;
+                
+                // オフシーズン調整（1-3月はクラブ収入を40%に）
+                if (!isHighSeason) {
+                    clubRevenue *= 0.4;
+                }
+
+                const grossRevenue = totalRoomRevenue + monthlyRestaurantRevenue + clubRevenue;
+                const netIncome = grossRevenue - monthlyExpenses;
+
+                const revpars = {};
+                Object.entries(roomTypes).forEach(([type, details]) => {
+                    revpars[type] = (roomRevenues[type] / (details.rooms * 30));
+                });
+                
+                // 平均客室単価の計算
+                const totalRooms = Object.values(roomTypes).reduce((sum, type) => sum + type.rooms, 0);
+                const occupiedRooms = Object.entries(roomTypes).reduce(
+                    (sum, [type, details]) => sum + (details.rooms * (occupancyRates[type] / 100)), 0
+                );
+                const totalRoomNights = occupiedRooms * 30;
+                const adr = totalRoomRevenue / totalRoomNights;
+
+                return {
+                    month: `${month + 1}月`,
+                    grossRevenue,
+                    netIncome,
+                    roomRevenue: totalRoomRevenue,
+                    restaurantRevenue: monthlyRestaurantRevenue,
+                    clubRevenue,
+                    revpars,
+                    adr,
+                    isHighSeason
+                };
+            });
+        }
+
+        // 月別収支グラフの更新
+        function updateChart(monthlyData) {
+            if (revenueChart) {
+                revenueChart.destroy();
+            }
+
+            const ctx = document.getElementById('revenue-chart').getContext('2d');
+            revenueChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: monthlyData.map(d => d.month),
+                    datasets: [{
+                        label: 'グロス収入',
+                        data: monthlyData.map(d => d.grossRevenue),
+                        borderColor: '#1e3a8a',
+                        backgroundColor: 'rgba(30, 58, 138, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }, {
+                        label: 'Net収入',
+                        data: monthlyData.map(d => d.netIncome),
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }, {
+                        label: '宿泊収入',
+                        data: monthlyData.map(d => d.roomRevenue),
+                        borderColor: '#06b6d4',
+                        tension: 0.4,
+                        borderDash: [5, 5]
+                    }, {
+                        label: 'F&B収入',
+                        data: monthlyData.map(d => d.restaurantRevenue),
+                        borderColor: '#f59e0b',
+                        tension: 0.4,
+                        borderDash: [5, 5]
+                    }, {
+                        label: 'クラブ収入',
+                        data: monthlyData.map(d => d.clubRevenue),
+                        borderColor: '#f472b6',
+                        tension: 0.4,
+                        borderDash: [5, 5]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            ticks: {
+                                callback: (value) => `¥${(value / 1000000).toFixed(1)}M`
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: (context) => {
+                                    return `${context.dataset.label}: ¥${context.raw.toLocaleString()}`;
+                                }
+                            }
+                        },
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+
+        // 月別詳細テーブルの更新
+        function updateDetailedTable(monthlyData) {
+            const table = document.getElementById('monthly-data-table').querySelector('tbody');
+            table.innerHTML = '';
+            
+            monthlyData.forEach(data => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${data.month}</td>
+                    <td>¥${Math.round(data.roomRevenue).toLocaleString()}</td>
+                    <td>¥${Math.round(data.restaurantRevenue).toLocaleString()}</td>
+                    <td>¥${Math.round(data.clubRevenue).toLocaleString()}</td>
+                    <td>¥${Math.round(data.grossRevenue).toLocaleString()}</td>
+                    <td>¥${monthlyExpenses.toLocaleString()}</td>
+                    <td class="${data.netIncome > 0 ? 'positive' : 'negative'}">
+                        ¥${Math.round(data.netIncome).toLocaleString()}
+                    </td>
+                `;
+                
+                // 繁忙期か通常期かでハイライト
+                if (data.isHighSeason) {
+                    row.style.backgroundColor = 'rgba(16, 185, 129, 0.05)';
+                }
+                
+                table.appendChild(row);
+            });
+        }
+
+        // 収益構成円グラフの更新
+        function updateCompositionChart(monthlyData) {
+            if (revenueCompositionChart) {
+                revenueCompositionChart.destroy();
+            }
+            
+            // 収入源別に集計
+            const totalRoom = monthlyData.reduce((sum, month) => sum + month.roomRevenue, 0);
+            const totalRestaurant = monthlyData.reduce((sum, month) => sum + month.restaurantRevenue, 0);
+            const totalClub = monthlyData.reduce((sum, month) => sum + month.clubRevenue, 0);
+            
+            const ctx = document.getElementById('revenue-composition-chart').getContext('2d');
+            revenueCompositionChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['宿泊収入', 'F&B収入', 'クラブ＆イベント収入'],
+                    datasets: [{
+                        data: [totalRoom, totalRestaurant, totalClub],
+                        backgroundColor: [
+                            '#06b6d4',
+                            '#f59e0b',
+                            '#f472b6'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: (context) => {
+                                    const value = context.raw;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = ((value / total) * 100).toFixed(1);
+                                    return `${context.label}: ¥${value.toLocaleString()} (${percentage}%)`;
+                                }
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: '収入源別構成比',
+                            font: {
+                                size: 16
+                            }
+                        },
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+
+        // 季節分布バーチャートの更新
+        function updateSeasonalChart(monthlyData) {
+            if (seasonalDistributionChart) {
+                seasonalDistributionChart.destroy();
+            }
+            
+            // シーズン別に集計
+            const highSeasonMonths = monthlyData.filter(m => m.isHighSeason);
+            const lowSeasonMonths = monthlyData.filter(m => !m.isHighSeason);
+            
+            const highSeasonRevenue = highSeasonMonths.reduce((sum, month) => sum + month.grossRevenue, 0);
+            const lowSeasonRevenue = lowSeasonMonths.reduce((sum, month) => sum + month.grossRevenue, 0);
+            
+            const highSeasonProfit = highSeasonMonths.reduce((sum, month) => sum + month.netIncome, 0);
+            const lowSeasonProfit = lowSeasonMonths.reduce((sum, month) => sum + month.netIncome, 0);
+            
+            const ctx = document.getElementById('seasonal-distribution-chart').getContext('2d');
+            seasonalDistributionChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['繁忙期 (4-12月)', '通常期 (1-3月)'],
+                    datasets: [{
+                        label: '総収入',
+                        data: [highSeasonRevenue, lowSeasonRevenue],
+                        backgroundColor: 'rgba(6, 182, 212, 0.7)',
+                        borderColor: '#06b6d4',
+                        borderWidth: 1
+                    }, {
+                        label: '純利益',
+                        data: [highSeasonProfit, lowSeasonProfit],
+                        backgroundColor: 'rgba(16, 185, 129, 0.7)',
+                        borderColor: '#10b981',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            ticks: {
+                                callback: (value) => `¥${(value / 1000000).toFixed(0)}M`
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: (context) => {
+                                    return `${context.dataset.label}: ¥${context.raw.toLocaleString()}`;
+                                }
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'シーズン別収益分布',
+                            font: {
+                                size: 16
+                            }
+                        },
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+        
+        // 統計情報の更新
+        function updateStats(monthlyData) {
+            const totalGrossRevenue = monthlyData.reduce((sum, month) => sum + month.grossRevenue, 0);
+            const totalNetIncome = monthlyData.reduce((sum, month) => sum + month.netIncome, 0);
+            const totalRoomRevenue = monthlyData.reduce((sum, month) => sum + month.roomRevenue, 0);
+            const totalRestaurantRevenue = monthlyData.reduce((sum, month) => sum + month.restaurantRevenue, 0);
+            const totalClubRevenue = monthlyData.reduce((sum, month) => sum + month.clubRevenue, 0);
+            const annualExpenses = monthlyExpenses * 12;
+            const netReturnRate = (totalNetIncome / totalInvestment * 100).toFixed(1);
+            
+            // 平均ADR（Average Daily Rate）の計算
+            const averageADR = monthlyData.reduce((sum, month) => sum + month.adr, 0) / monthlyData.length;
+
+            // 統計表示の更新
+            document.getElementById('gross-revenue').textContent = 
+                `¥${Math.round(totalGrossRevenue).toLocaleString()}`;
+            document.getElementById('net-revenue').textContent = 
+                `¥${Math.round(totalNetIncome).toLocaleString()}`;
+            document.getElementById('annual-expenses').textContent = 
+                `¥${annualExpenses.toLocaleString()}`;
+            document.getElementById('net-return').textContent = `${netReturnRate}%`;
+            document.getElementById('accommodation-revenue').textContent = 
+                `¥${Math.round(totalRoomRevenue).toLocaleString()}`;
+            document.getElementById('restaurant-revenue').textContent = 
+                `¥${Math.round(totalRestaurantRevenue).toLocaleString()}`;
+            document.getElementById('club-revenue').textContent = 
+                `¥${Math.round(totalClubRevenue).toLocaleString()}`;
+            document.getElementById('average-daily-rate').textContent = 
+                `¥${Math.round(averageADR).toLocaleString()}`;
+            
+            // 目標達成率のプログレスバー更新
+            const returnProgress = Math.min((netReturnRate / targets.netReturn) * 100, 100);
+            document.getElementById('return-progress-bar').style.width = `${returnProgress}%`;
+            
+            // カラー切り替え：目標達成で緑、未達成で青
+            if (netReturnRate >= targets.netReturn) {
+                document.getElementById('return-progress-bar').style.backgroundColor = '#10b981';
+            } else {
+                document.getElementById('return-progress-bar').style.backgroundColor = '#06b6d4';
+            }
+
+            // RevPAR更新
+            const revparList = document.getElementById('revpar-list');
+            revparList.innerHTML = '<div class="section-title tooltip">ルームタイプ別 RevPAR (年間平均)<span class="tooltiptext">客室あたりの収益。稼働率と客室単価の掛け合わせ</span></div>';
+            Object.entries(roomTypes).forEach(([type, details]) => {
+                const averageRevpar = monthlyData.reduce((sum, month) => 
+                    sum + month.revpars[type], 0) / monthlyData.length;
+                const div = document.createElement('div');
+                div.className = 'revpar-item';
+                div.innerHTML = `
+                    <span>${details.name}</span>
+                    <span>¥${Math.round(averageRevpar).toLocaleString()}</span>
+                `;
+                revparList.appendChild(div);
+            });
+            
+            // ROI情報の更新
+            const currentROI = {
+                profit: Math.round(totalNetIncome),
+                percentage: netReturnRate
+            };
+            
+            document.getElementById('roi-annual-profit').textContent = 
+                `¥${currentROI.profit.toLocaleString()}`;
+            document.getElementById('roi-percentage').textContent = `${currentROI.percentage}%`;
+            
+            // ROIサークルの回転角度を計算
+            const returnYears = totalInvestment / totalNetIncome;
+            document.getElementById('roi-years').textContent = `${returnYears.toFixed(1)}年`;
+            
+            // ROIサークルのアニメーション
+            const circle = document.getElementById('roi-circle');
+            if (circle) {
+                const rotationDegrees = Math.min(360 * (returnYears / 15), 359); // 15年を最大値として回転
+                circle.style.setProperty('--rotation', `${rotationDegrees}deg`);
+            }
+        }
+
+        // 全計算の更新
+        function updateCalculations() {
+            const monthlyData = calculateMonthlyData();
+            updateChart(monthlyData);
+            updateStats(monthlyData);
+            updateDetailedTable(monthlyData);
+            updateCompositionChart(monthlyData);
+            updateSeasonalChart(monthlyData);
+        }
+
+        // 月間経費スライダーのイベントリスナーを追加
+        function initializeExpensesControls() {
+            const monthlyExpensesSlider = document.getElementById('monthly-expenses-slider');
+            const monthlyExpensesValue = document.getElementById('monthly-expenses-value');
+
+            monthlyExpensesSlider.addEventListener('input', (e) => {
+                monthlyExpenses = parseInt(e.target.value);
+                monthlyExpensesValue.textContent = `¥${monthlyExpenses.toLocaleString()}`;
+                updateCalculations();
+            });
+        }
+
+        // 初期化
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeTabs();
+            initializeScenarioSelector();
+            initializeOccupancyControls();
+            initializeRateControls();
+            initializeExpensesControls();
+            initializeDetailedViewToggle();
+            updateCalculations();
+            
+            // 初期シナリオを標準に設定
+            applyScenario('standard');
+        });
+    </script>
+</body>
+</html>
